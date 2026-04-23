@@ -1,4 +1,2 @@
 kagglehub
-scikit-learn
-pandas
-os
+
