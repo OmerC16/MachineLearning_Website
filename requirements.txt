@@ -1,2 +1,2 @@
 kagglehub
-sklearn.tree
+DecisionTreeClassifier
