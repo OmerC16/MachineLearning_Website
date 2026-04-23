@@ -10,7 +10,7 @@ file_path = os.path.join(path, files[0])
 df = pd.read_csv(file_path)
 
 le = sklearn.preprocessing.LabelEncoder()
-df["age"] = le.fir_transform(df["age"])
+df["age"] = le.fit_transform(df["age"])
 
 features = ["age", "gender", "hyper_tension", "heart_diseas", "ever_married", "work_type", "Residence_type", "avg_glucose_level", "bmi", "smoking_status"]
 x = df[features]
