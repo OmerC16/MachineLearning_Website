@@ -2,7 +2,8 @@ import streamlit as st
 import kagglehub
 import pandas as pd
 import os
-from sklearn.tree import DecisionTreeClassifier, plot_tree
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.tree import plot_tree
 from sklearn import preprocessing
 
 path = kagglehub.dataset_download("fedesoriano/stroke-prediction-dataset")
