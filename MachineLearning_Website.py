@@ -2,7 +2,6 @@ import streamlit as st
 import kagglehub
 import pandas as pd
 import os
-import sklearn
 
 path = kagglehub.dataset_download("fedesoriano/stroke-prediction-dataset")
 files = os.listdir(path)
