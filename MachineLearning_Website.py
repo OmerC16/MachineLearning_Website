@@ -16,7 +16,7 @@ features = ["age", "gender", "hyper_tension", "heart_diseas", "ever_married", "w
 x = df[features]
 y = df["stroke"]
 
-#model = sklearn.tree.DecisionTreeClassifier(max_depth=9)
-#model.fit(z, y)
+model = sklearn.tree.DecisionTreeClassifier(max_depth=9)
+model.fit(z, y)
 
 st.write(model.score(x, y))"""
