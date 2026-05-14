@@ -27,6 +27,8 @@ lables = {
 colors = {
   0: "#2ECC71",
   1: "#74C3C",
+}
+
 """X = df[["transaction_amount", "customer_age"]
 y = df["is_fraud"]
 
