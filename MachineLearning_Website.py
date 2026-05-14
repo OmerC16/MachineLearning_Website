@@ -52,7 +52,7 @@ st.scatter_chart(
   x="transaction_amount",
   y="customer_age",
   color="is_fraud"
-)
+  )
 elif page == "Model Performance":
   st.title("Model Performance")
   st.metric("Accuracy", f"{accuracy:.2f}")
