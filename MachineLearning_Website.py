@@ -30,7 +30,7 @@ colors = {
   1: "#74C3C",
 }
 
-X = df[["transaction_amount", "customer_age"]
+X = df[["transaction_amount", "customer_age"]]
 y = df["is_fraud"]
 
 X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
