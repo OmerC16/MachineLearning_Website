@@ -5,6 +5,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 import streamlit as st
+import numpy as np
 
 def load_fraud_data():
   path = kagglehub.dataset_download("waddahali/fraud-detection")
@@ -60,3 +61,28 @@ if page == "Dataset":
 elif page == "Model Performance":
   st.title("Model Performance")
   st.metric("Accuracy", f"{accuracy:.2f}")
+elif page == "Make Prediction":
+  transaction_amount = st.slider("Transaction Amount", 0, 300)
+  customer_age = st.slider("Customer Age", 0, 80)
+
+  if st.button("Predict"):
+    input_data = np.array([[transaction_amount, customer_age]])
+
+    prediction = knn.predict(input_data)[0]
+    st.subheader(f"Prediction {label}")
+
+    new_point = pd.DataFrame({
+      "transaction_amount": [transaction_amount],
+      "customer_age": [customer_age],
+      "is_fraud": 2
+    })
+
+    plot_df = pd.concat([df, new_point], ignore_index=True)
+
+    st.subheader("Visualization")
+    
+    st.scatter_chart(
+    df,
+    x="transaction_amount",
+    y="customer_age",
+    color="is_fraud")
