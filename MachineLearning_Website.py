@@ -19,17 +19,17 @@ def load_fraud_data():
 
 df = load_fraud_data()
 
-X = df[["transaction_amount", "customer_age"]
+"""X = df[["transaction_amount", "customer_age"]
 y = df["is_fraud"]
 
 X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 
 knn = KNeighborsClassifier(n_neighbors=5)
-knn.fit(X_train, Y_train)
+knn.fit(X_train, Y_train)"""
 
 st.sidebar.title("Navigation")
 
-page = st.sidebar.radio("Choose a section", ["Dataset", "Model Performance", "Make Prediction")
+page = st.sidebar.radio("Choose a section", ["Dataset", "Model Performance", "Make Prediction"])
 
 if page == "Dataset":
   st.title("Dataset")
