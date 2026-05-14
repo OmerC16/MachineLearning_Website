@@ -3,6 +3,7 @@ import pandas as pd
 import os
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
 import streamlit as st
 
 def load_fraud_data():
@@ -29,13 +30,12 @@ colors = {
   1: "#74C3C",
 }
 
-"""X = df[["transaction_amount", "customer_age"]
+X = df[["transaction_amount", "customer_age"]
 y = df["is_fraud"]
 
 X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 
-knn = KNeighborsClassifier(n_neighbors=5)
-knn.fit(X_train, Y_train)"""
+accuracy = accuracy_score(y_test, y_pred)
 
 st.sidebar.title("Navigation")
 
@@ -53,3 +53,6 @@ st.scatter_chart(
   y="customer_age",
   color="is_fraud"
 )
+elif page == "Model Performance":
+  st.title("Model Performance")
+  st.metric("Accuracy", f"{accuracy:.2f}")
