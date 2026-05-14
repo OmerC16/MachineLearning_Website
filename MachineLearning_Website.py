@@ -35,7 +35,7 @@ y = df["is_fraud"]
 
 X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 
-accuracy = accuracy_score(y_test, y_pred)
+accuracy = accuracy_score(Y_test, Y_pred)
 
 st.sidebar.title("Navigation")
 
