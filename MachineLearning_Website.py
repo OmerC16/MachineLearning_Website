@@ -20,7 +20,7 @@ def load_fraud_data():
 df = load_fraud_data()
 
 lables = {
-  0: "Not fraud,
+  0: "Not fraud",
   1: "Fraud"
 }
 
