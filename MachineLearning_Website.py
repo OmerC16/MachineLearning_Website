@@ -40,5 +40,6 @@ st.subheader("Scatter Plot")
 st.scatter_chart(
   df,
   x="transaction_amount",
-  y="customer_age"
+  y="customer_age",
+  color="#E74C3C"
 )
