@@ -39,6 +39,6 @@ if page == "Dataset":
 st.subheader("Scatter Plot")
 st.scatter_chart(
   df,
-  x="customer_age",
-  y="transaction_amount"
+  x="transaction_amount",
+  y="customer_age"
 )
