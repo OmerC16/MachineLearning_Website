@@ -69,7 +69,13 @@ elif page == "Make Prediction":
     input_data = np.array([[transaction_amount, customer_age]])
 
     prediction = knn.predict(input_data)[0]
-    st.subheader(f"Prediction {labels}")
+
+    if prediction == 0:
+      label = "Not Fraud"
+    else:
+      label = "Fraud"
+    
+    st.subheader(f"Prediction {label}")
 
     new_point = pd.DataFrame({
       "transaction_amount": [transaction_amount],
