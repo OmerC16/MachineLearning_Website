@@ -11,7 +11,7 @@ def load_fraud_data():
   csv_path = os.path.join(path, files[0])
 
   df = pd.read_csv(csv_path)
-  df = df["transaction_amount", "customer_age", "is_fraud"]
+  df = df[["transaction_amount", "customer_age", "is_fraud"]]
   df["transaction_amount"] = df["transaction_amount"].fillna(df["transaction_amount"].mean())
   df["customer_age"] = df["customer_age"].fillna(df["customer_age"].mean())
   
