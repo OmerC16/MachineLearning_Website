@@ -21,7 +21,7 @@ def load_fraud_data():
 
 df = load_fraud_data()
 
-lables = {
+labels = {
   0: "Not fraud",
   1: "Fraud"
 }
@@ -69,7 +69,7 @@ elif page == "Make Prediction":
     input_data = np.array([[transaction_amount, customer_age]])
 
     prediction = knn.predict(input_data)[0]
-    st.subheader(f"Prediction {label}")
+    st.subheader(f"Prediction {labels}")
 
     new_point = pd.DataFrame({
       "transaction_amount": [transaction_amount],
