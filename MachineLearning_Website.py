@@ -19,6 +19,14 @@ def load_fraud_data():
 
 df = load_fraud_data()
 
+lables = {
+  0: "Not fraud,
+  1: "Fraud"
+}
+
+colors = {
+  0: "#2ECC71",
+  1: "#74C3C",
 """X = df[["transaction_amount", "customer_age"]
 y = df["is_fraud"]
 
@@ -41,5 +49,5 @@ st.scatter_chart(
   df,
   x="transaction_amount",
   y="customer_age",
-  color="#E74C3C"
+  color="is_fraud"
 )
