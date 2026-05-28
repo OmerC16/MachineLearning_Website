@@ -5,6 +5,6 @@ import os
 import kagglehub
 
 # Download latest version
-path = kagglehub.dataset_download("aiexplorer77/academic-performance-prediction")
+#path = kagglehub.dataset_download("aiexplorer77/academic-performance-prediction")
 
-print("Path to dataset files:", path)
+#print("Path to dataset files:", path)
