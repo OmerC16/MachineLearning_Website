@@ -1,94 +1,11 @@
 import kagglehub
 import pandas as pd
 import os
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
-import streamlit as st
-import numpy as np
+import streamlit
 
-def load_fraud_data():
-  path = kagglehub.dataset_download("waddahali/fraud-detection")
-  files = os.listdir(path)
-  csv_path = os.path.join(path, files[0])
+path = kagglehub.dataset_download(
+  "adityadesai13/used-car-dataset-ford-and-mercedes"
+)
 
-  df = pd.read_csv(csv_path)
-  df = df[["transaction_amount", "customer_age", "is_fraud"]]
-  df["transaction_amount"] = df["transaction_amount"].fillna(df["transaction_amount"].mean())
-  df["customer_age"] = df["customer_age"].fillna(df["customer_age"].mean())
-  
-  return df
-
-df = load_fraud_data()
-
-labels = {
-  0: "Not fraud",
-  1: "Fraud"
-}
-
-colors = {
-  0: "#2ECC71",
-  1: "#74C3C",
-}
-
-X = df[["transaction_amount", "customer_age"]]
-y = df["is_fraud"]
-
-X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
-
-knn = KNeighborsClassifier(n_neighbors=11)
-knn.fit(X_train, Y_train)
-
-y_pred = knn.predict(X_test)
-accuracy = accuracy_score(Y_test, y_pred)
-
-st.sidebar.title("Navigation")
-
-page = st.sidebar.radio("Choose a section", ["Dataset", "Model Performance", "Make Prediction"])
-
-if page == "Dataset":
-  st.title("Dataset")
-  st.subheader("Data")
-  st.dataframe(df)
-
-  st.subheader("Scatter Plot")
-  st.scatter_chart(
-  df,
-  x="transaction_amount",
-  y="customer_age",
-  color="is_fraud"
-  )
-elif page == "Model Performance":
-  st.title("Model Performance")
-  st.metric("Accuracy", f"{accuracy:.2f}")
-elif page == "Make Prediction":
-  transaction_amount = st.slider("Transaction Amount", 0, 300)
-  customer_age = st.slider("Customer Age", 0, 80)
-
-  if st.button("Predict"):
-    input_data = np.array([[transaction_amount, customer_age]])
-
-    prediction = knn.predict(input_data)[0]
-
-    if prediction == 0:
-      label = "Not Fraud"
-    else:
-      label = "Fraud"
-    
-    st.subheader(f"Prediction {label}")
-
-    new_point = pd.DataFrame({
-      "transaction_amount": [transaction_amount],
-      "customer_age": [customer_age],
-      "is_fraud": 2
-    })
-
-    plot_df = pd.concat([df, new_point], ignore_index=True)
-
-    st.subheader("Visualization")
-    
-    st.scatter_chart(
-    df,
-    x="transaction_amount",
-    y="customer_age",
-    color="is_fraud")
+df = pd.read_csv(os.path.join(path, "ford_csv"))
+df = df["mileage", "price"]
