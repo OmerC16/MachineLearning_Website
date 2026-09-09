@@ -6,6 +6,7 @@ path = kagglehub.dataset_download("shubhambathwal/flight-price-prediction")
 
 df = pd.read_csv(os.path.join(path, "business.csv"))
 df = df[["time_taken", "price"]]
+df = df[0:900]
 
 st.table(df.head())
 
