@@ -8,3 +8,5 @@ df = pd.read_csv(os.path.join(path, "business.csv"))
 df = df[["time_taken", "price"]]
 
 st.table(df.head())
+
+st.scatter_chart(df)
