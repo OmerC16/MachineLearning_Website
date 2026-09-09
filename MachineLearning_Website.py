@@ -10,4 +10,4 @@ df = df[0:900]
 
 st.table(df.head())
 
-st.scatter_chart(df)
+st.scatter_chart(data=df, x="time_taken", y="price")
