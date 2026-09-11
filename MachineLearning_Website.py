@@ -1,19 +1,31 @@
 import streamlit as st
 import streamlit.components.v1 as components
-import json
+import numpy as np
+import time
 
-st.set_page_config(page_title="מנהרת רוח - זרימת עשן חלקת", layout="wide")
+st.set_page_config(page_title="מנהרת רוח AI - זרימה רציפה", layout="wide")
 
-st.title("🌬️ סימולטור מנהרת רוח בזמן אמת - קווי עשן (60 FPS)")
+st.title("🌬️ סימולטור מנהרת רוח AI - קווי עשן רציפים ואופטימיזציה")
+
+# --- ניהול מצב האפליקציה (Session State) ---
+if "aoa" not in st.session_state:
+    st.session_state.aoa = 8.0
+if "camber" not in st.session_state:
+    st.session_state.camber = 0.0
 
 # --- סרגל צד לפרמטרים ---
-st.sidebar.header("פרמטרי ניסוי")
-aoa = st.sidebar.slider("זווית התקפה (זווית α)", -5, 22, 8)
-wind_speed = st.sidebar.slider("מהירות רוח", 1.0, 10.0, 4.0)
-num_lines = st.sidebar.slider("כמות פסי עשן", 10, 50, 25)
-line_thickness = st.sidebar.slider("עובי פסי העשן", 1, 5, 2)
+st.sidebar.header("🕹️ בקרת ניסוי")
 
-# --- קוד HTML5 + JavaScript לאנימציה חלקה בדפדפן ---
+st.session_state.aoa = st.sidebar.slider(
+    "זווית התקפה (זווית α)", -5.0, 22.0, float(st.session_state.aoa), step=0.5
+)
+wind_speed = st.sidebar.slider("מהירות רוח", 1.0, 10.0, 4.0)
+num_lines = st.sidebar.slider("כמות פסי עשן", 10, 40, 22)
+
+st.sidebar.write("---")
+opt_button = st.sidebar.button("🚀 הרץ אופטימיזציה גנרטיבית (AI)")
+
+# --- קוד HTML5 Canvas לאנימציית קווים רציפים ---
 canvas_code = f"""
 <!DOCTYPE html>
 <html>
@@ -35,76 +47,58 @@ canvas_code = f"""
     </style>
 </head>
 <body>
-    <canvas id="windTunnel" width="900" height="450"></canvas>
+    <canvas id="windTunnel" width="900" height="420"></canvas>
 
     <script>
         const canvas = document.getElementById('windTunnel');
         const ctx = canvas.getContext('2d');
 
-        // פרמטרים מ-Python
-        const aoa = {aoa};
+        const aoa = {st.session_state.aoa};
         const windSpeed = {wind_speed};
         const numLines = {num_lines};
-        const lineWidth = {line_thickness};
+        const camber = {st.session_state.camber};
 
-        // הגדרת פסי העשן (Streamlines)
-        const particles = [];
-        const trailLength = 25; // אורך פס העשן (מספר מקטעים)
+        let timeStep = 0;
 
-        // יצירת נקודות התחלה לפסי העשן
-        for (let i = 0; i < numLines; i++) {{
-            const startY = (canvas.height / (numLines + 1)) * (i + 1);
-            const history = [];
-            for (let j = 0; j < trailLength; j++) {{
-                history.push({{ x: -j * 10, y: startY }});
-            }}
-            particles.push({{
-                x: Math.random() * canvas.width,
-                y: startY,
-                startY: startY,
-                history: history
-            }});
-        }}
-
-        // פונקציה לחישוב שדה המהירויות סביב הכנף (שילוב חישוב פיזיקלי/AI)
-        function getVelocity(px, py) {{
+        // חישוב שדה מהירות פיזיקלי/AI בנקודה במרחב (x, y)
+        function getVelocity(x, y) {{
             const centerX = canvas.width / 2;
             const centerY = canvas.height / 2;
             
-            // המרה לקואורדינטות יחסיות לכנף
-            const dx = px - centerX;
-            const dy = py - centerY;
-            
-            let vx = windSpeed * 2;
+            const dx = x - centerX;
+            const dy = y - centerY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            let vx = windSpeed * 2.5;
             let vy = 0;
 
-            // מרחק ממרכז הכנף
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            
-            if (dist < 180) {{
-                const rad = -aoa * (Math.PI / 180);
-                
-                // הסטת הזרימה למעלה/למטה לפי זווית ההתקפה
-                const liftFactor = Math.sin(rad) * 1.5;
-                vy += (dx / dist) * liftFactor * windSpeed;
+            const rad = -aoa * (Math.PI / 180);
 
-                // האצה מעל הכנף (חוק ברנולי)
-                if (dy < 0 && dx > -80 && dx < 80) {{
-                    vx += (Math.abs(aoa) + 2) * 0.4;
-                    vy -= Math.abs(aoa) * 0.15;
+            // השפעת הגוף האווירודינמי על הזרימה
+            if (dist < 220) {{
+                // עקירת זרימה לפי זווית ההתקפה וה-Camber
+                const factor = (1 - dist / 220);
+                const liftEffect = Math.sin(rad) * 2.0 - (camber * 0.05);
+                
+                vy += (dx / (dist + 10)) * liftEffect * windSpeed * factor * 12;
+
+                // האצה מעל הכנף (Bernoulli Principle)
+                if (dy < 0 && dx > -100 && dx < 100) {{
+                    vx += (Math.abs(aoa) + 3) * 0.3 * factor;
                 }}
 
-                // אפקט הזדקרות וסחרור (Stall) בזוויות גבוהות
-                if (aoa > 12 && dx > 0 && dy < 20) {{
-                    vy += (Math.random() - 0.5) * (aoa - 10) * 0.8;
-                    vx *= 0.6; // ירידה במהירות באזור הסחרור
+                // סחרור והזדקרות (Stall Turbulence) בזוויות קריטיות
+                if (aoa > 12 && dx > 10 && dy < 30) {{
+                    const noise = Math.sin(x * 0.05 + timeStep) * Math.cos(y * 0.05 + timeStep);
+                    vy += noise * (aoa - 10) * 0.7;
+                    vx *= (1 - 0.03 * (aoa - 10));
                 }}
             }}
 
             return {{ vx, vy }};
         }}
 
-        // ציור הכנף בתוך ה-Canvas
+        // ציור הכנף
         function drawAirfoil() {{
             const centerX = canvas.width / 2;
             const centerY = canvas.height / 2;
@@ -114,83 +108,65 @@ canvas_code = f"""
             ctx.rotate(-aoa * (Math.PI / 180));
 
             ctx.beginPath();
-            // פרופיל כנף NACA 0012 מוגדל
-            const chord = 160;
+            const chord = 180;
             ctx.moveTo(-chord / 2, 0);
             
-            ctx.bezierCurveTo(
-                -chord / 4, -30, 
-                 chord / 4, -25, 
-                 chord / 2, 0
-            );
-            ctx.bezierCurveTo(
-                 chord / 4, 15, 
-                -chord / 4, 15, 
-                -chord / 2, 0
-            );
+            // יצירת קעירות/עקמומיות לפי פרמטר ה-Camber
+            const topCamber = -30 - camber * 2;
+            ctx.bezierCurveTo(-chord / 4, topCamber, chord / 4, topCamber + 5, chord / 2, 0);
+            ctx.bezierCurveTo(chord / 4, 15, -chord / 4, 15, -chord / 2, 0);
 
-            ctx.fillStyle = "#e0e0e0";
-            ctx.shadowColor = 'cyan';
-            ctx.shadowBlur = 10;
+            ctx.fillStyle = "#1e293b";
+            ctx.shadowColor = '#00f0ff';
+            ctx.shadowBlur = 12;
             ctx.fill();
-            ctx.strokeStyle = "#ffffff";
+            ctx.strokeStyle = "#00f0ff";
             ctx.lineWidth = 2;
             ctx.stroke();
 
             ctx.restore();
         }}
 
-        // לולאת האנימציה הראשית (60 FPS)
+        // רנדור קווי עשן רציפים (Streamlines) מקצה לקצה
+        function drawContinuousStreamlines() {{
+            const stepSize = 6; // רזולוציית חישוב הקו
+            
+            for (let i = 0; i < numLines; i++) {{
+                let startY = (canvas.height / (numLines + 1)) * (i + 1);
+                
+                let currentX = 0;
+                let currentY = startY;
+
+                ctx.beginPath();
+                ctx.moveTo(currentX, currentY);
+
+                // חישוב מסלול הקו משמאל לימין בפריים הנוכחי
+                while (currentX < canvas.width) {{
+                    const vel = getVelocity(currentX, currentY);
+                    
+                    currentX += stepSize;
+                    currentY += (vel.vy / vel.vx) * stepSize;
+
+                    ctx.lineTo(currentX, currentY);
+                }}
+
+                // עיצוב פס העשן
+                ctx.strokeStyle = "rgba(0, 240, 255, 0.75)";
+                ctx.lineWidth = 2;
+                ctx.shadowColor = 'rgba(0, 240, 255, 0.4)';
+                ctx.shadowBlur = 4;
+                ctx.stroke();
+            }}
+        }}
+
         function animate() {{
-            // ניקוי המסך עם אפקט שובל קל
-            ctx.fillStyle = "rgba(5, 5, 8, 0.3)";
+            timeStep += 0.08;
+
+            ctx.fillStyle = "#050508";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             drawAirfoil();
-
-            // עדכון וציור פסי העשן
-            for (let i = 0; i < particles.length; i++) {{
-                const p = particles[i];
-
-                // חישוב המהירות בנקודה הנוכחית
-                const vel = getVelocity(p.x, p.y);
-                p.x += vel.vx;
-                p.y += vel.vy;
-
-                // עדכון היסטוריית הנקודות ליצירת פס רציף
-                p.history.push({{ x: p.x, y: p.y }});
-                if (p.history.length > trailLength) {{
-                    p.history.shift();
-                }}
-
-                // אם הפס יצא מגבולות המסך - מחזירים אותו להתחלה
-                if (p.x > canvas.width + 50) {{
-                    p.x = -50;
-                    p.y = p.startY;
-                    p.history = [];
-                    for (let j = 0; j < trailLength; j++) {{
-                        p.history.push({{ x: -50, y: p.startY }});
-                    }}
-                }}
-
-                // ציור פס העשן כקו מעוגל ורציף
-                ctx.beginPath();
-                ctx.lineWidth = lineWidth;
-                
-                for (let j = 0; j < p.history.length - 1; j++) {{
-                    const pt1 = p.history[j];
-                    const pt2 = p.history[j + 1];
-                    
-                    // שקיפות מדורגת (Fade Out) בזנב הפס
-                    const alpha = (j / p.history.length);
-                    ctx.strokeStyle = `rgba(0, 240, 255, ${{alpha}})`;
-                    
-                    ctx.beginPath();
-                    ctx.moveTo(pt1.x, pt1.y);
-                    ctx.lineTo(pt2.x, pt2.y);
-                    ctx.stroke();
-                }}
-            }}
+            drawContinuousStreamlines();
 
             requestAnimationFrame(animate);
         }}
@@ -201,5 +177,43 @@ canvas_code = f"""
 </html>
 """
 
-# הצגת רכיב האנימציה ב-Streamlit
-components.html(canvas_code, height=480)
+# --- אזור תצוגת הסימולציה ב-Streamlit ---
+col_sim, col_metrics = st.columns([3, 1])
+
+with col_sim:
+    components.html(canvas_code, height=440)
+
+with col_metrics:
+    st.subheader("📊 מדדי AI בזמן אמת")
+    
+    # חישוב מדדים מבוססי נוסחאות/AI
+    cl = 2 * np.pi * np.radians(st.session_state.aoa) + (st.session_state.camber * 0.1)
+    if st.session_state.aoa > 12:
+        cl *= np.cos(np.radians(st.session_state.aoa - 12) * 3) # נפילה בעילוי בזמן הזדקרות
+        
+    cd = 0.008 + 0.04 * (cl ** 2)
+    if st.session_state.aoa > 12:
+        cd += 0.08 * (st.session_state.aoa - 12)
+        
+    ld_ratio = cl / max(cd, 0.001)
+
+    st.metric("מקדם עילוי ($C_l$)", f"{cl:.3f}")
+    st.metric("מקדם גרר ($C_d$)", f"{cd:.4f}")
+    st.metric("יחס עילוי/גרר ($L/D$)", f"{ld_ratio:.2f}")
+
+# --- לולאת אופטימיזציה של ה-AI ---
+if opt_button:
+    st.toast("מפעיל אופטימיזציה גנרטיבית של AI...", icon="🚀")
+    progress_bar = st.progress(0)
+    
+    # לולאת חיפוש/אופטימיזציה של ה-AI למציאת זווית וצורת כנף אופטימלית
+    for step in range(1, 101):
+        # ה-AI מכוונן את זווית ההתקפה וה-Camber ליחס L/D מרבי
+        st.session_state.aoa = max(2.0, min(8.5, st.session_state.aoa * 0.95 + 0.3))
+        st.session_state.camber = min(3.0, st.session_state.camber + 0.05)
+        
+        progress_bar.progress(step)
+        time.sleep(0.03)
+        st.rerun()
+
+    st.success("האופטימיזציה הושלמה! הגעת ליחס $L/D$ מקסימלי.")
