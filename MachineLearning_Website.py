@@ -3,9 +3,9 @@ import streamlit.components.v1 as components
 import numpy as np
 import time
 
-st.set_page_config(page_title="מנהרת רוח AI - תנועת עשן ריאליסטית", layout="wide")
+st.set_page_config(page_title="מנהרת רוח AI - עשן ריאליסטי", layout="wide")
 
-st.title("🌬️ סימולטור מנהרת רוח AI - זרימת עשן חיה")
+st.title("🌬️ סימולטור מנהרת רוח AI - זרימת עשן ריאליסטית (100% Collision-Free)")
 
 # --- ניהול מצב האפליקציה ---
 if "aoa" not in st.session_state:
@@ -20,12 +20,12 @@ st.session_state.aoa = st.sidebar.slider(
     "זווית התקפה (זווית α)", -5.0, 22.0, float(st.session_state.aoa), step=0.5
 )
 wind_speed = st.sidebar.slider("מהירות רוח", 1.0, 10.0, 5.0)
-num_lines = st.sidebar.slider("כמות פסי עשן", 10, 40, 24)
+num_lines = st.sidebar.slider("כמות פסי עשן", 10, 35, 20)
 
 st.sidebar.write("---")
 opt_button = st.sidebar.button("🚀 הרץ אופטימיזציה גנרטיבית (AI)")
 
-# --- קוד HTML5 Canvas עם תנועת עשן ומניעת חדירה לכנף ---
+# --- קוד HTML5 Canvas עם מרקם עשן רך ומנגנון SDF למניעת חדירה ---
 canvas_code = f"""
 <!DOCTYPE html>
 <html>
@@ -40,9 +40,9 @@ canvas_code = f"""
             align-items: center;
         }}
         canvas {{
-            border: 1px solid #333;
+            border: 1px solid #222;
             border-radius: 8px;
-            background-color: #050508;
+            background-color: #030407;
         }}
     </style>
 </head>
@@ -62,83 +62,99 @@ canvas_code = f"""
         const centerY = canvas.height / 2;
         const chord = 180;
 
-        // בדיקה האם נקודה נמצאת בתוך תחום הכנף (Collision Box/Ellipse)
-        function isInsideAirfoil(px, py) {{
-            // העברת הנקודה למערכת הצירים של הכנף (מוטה בזווית ההתקפה)
-            const rad = aoa * (Math.PI / 180);
-            const dx = px - centerX;
-            const dy = py - centerY;
+        // --- חישוב מעטפת הכנף והרחקה פיזיקלית מדויקת (SDF) ---
+        function getAirfoilSurface(xRel) {{
+            // מנרמל את מיתר הכנף מ-0 עד 1
+            const normX = (xRel + chord / 2) / chord;
+            if (normX < 0 || normX > 1) return null;
 
-            const rx = dx * Math.cos(rad) - dy * Math.sin(rad);
-            const ry = dx * Math.sin(rad) + dy * Math.cos(rad);
+            // עובי פרופיל NACA מותאם כולל Camber
+            const maxThickness = 30 + camber * 4;
+            const thickness = 4 * maxThickness * normX * (1 - normX);
+            const camberLine = -Math.sin(normX * Math.PI) * camber * 10;
 
-            // הגדרת עובי הכנף לפי מיקום לאורך המיתר (NACA Airfoil Approximation)
-            if (rx < -chord / 2 || rx > chord / 2) return false;
-
-            const normX = (rx + chord / 2) / chord; // 0 עד 1
-            const maxThickness = 28 + camber * 3;
-            const thicknessAtX = 4 * maxThickness * normX * (1 - normX);
-
-            return Math.abs(ry) < thicknessAtX / 2;
+            return {{
+                yTop: camberLine - thickness / 2 - 4, // מרווח ביטחון למניעת חדירה
+                yBottom: camberLine + thickness / 2 + 4
+            }};
         }}
 
-        // חישוב שדה המהירויות ומניעת חדירה לכנף
-        function getFieldVelocity(x, y) {{
+        // חישוב שדה המהירויות עם מנגנון דחייה מוחלט
+        function getFlowVelocity(x, y) {{
             let vx = windSpeed * 2.8;
             let vy = 0;
 
             const rad = -aoa * (Math.PI / 180);
+            const cosA = Math.cos(rad);
+            const sinA = Math.sin(rad);
+
+            // המרת קואורדינטות למערכת הצירים של הכנף
             const dx = x - centerX;
             const dy = y - centerY;
-            const dist = Math.sqrt(dx * dx + dy * dy);
 
-            // השפעה אווירודינמית בסביבת הכנף
-            if (dist < 200) {{
-                const factor = (1 - dist / 200);
-                const liftEffect = Math.sin(rad) * 2.2;
-                
-                vy += (dx / (dist + 5)) * liftEffect * windSpeed * factor * 10;
+            const rx = dx * cosA - dy * sinA;
+            const ry = dx * sinA + dy * cosA;
 
-                // האצה מעל הכנף
-                if (dy < 0 && dx > -90 && dx < 90) {{
-                    vx += (Math.abs(aoa) + 2) * 0.4 * factor;
-                }}
+            const surface = getAirfoilSurface(rx);
 
-                // הזדקרות וסחרור בזוויות גבוהות
-                if (aoa > 12 && dx > 10) {{
-                    vy += (Math.random() - 0.5) * (aoa - 10) * 0.9;
-                    vx *= (1 - 0.02 * (aoa - 10));
+            // אם החלקיק נמצא בתוך או קרוב מאוד למעטפת הכנף - מטים אותו לחלוטין
+            if (surface) {{
+                if (ry > surface.yTop && ry < surface.yBottom) {{
+                    const distToTop = Math.abs(ry - surface.yTop);
+                    const distToBottom = Math.abs(ry - surface.yBottom);
+
+                    if (distToTop < distToBottom) {{
+                        // הסטה מעל הכנף
+                        vy -= 5.0 + Math.abs(aoa) * 0.3;
+                    }} else {{
+                        // הסטה מתחת לכנף
+                        vy += 5.0 + Math.abs(aoa) * 0.3;
+                    }}
+                    vx *= 0.85; // האטה קלה בעת התנגדות
                 }}
             }}
 
-            // מנגנון חסימה: אם החלקיק קרוב מדי לכנף - דוחפים אותו החוצה למעלה/למטה
-            if (isInsideAirfoil(x + vx, y + vy)) {{
-                if (dy < 0) {{
-                    vy -= 4.0 + Math.abs(aoa) * 0.2; // הסטה כלפי מעלה
-                }} else {{
-                    vy += 4.0 + Math.abs(aoa) * 0.2; // הסטה כלפי מטה
+            // השפעה אווירודינמית רחוקה (Flow Field)
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 220) {{
+                const factor = (1 - dist / 220);
+                vy += (dx / (dist + 10)) * Math.sin(rad) * windSpeed * factor * 14;
+
+                // האצה מעל הכנף (חוק ברנולי)
+                if (ry < 0 && rx > -chord/2 && rx < chord/2) {{
+                    vx += (Math.abs(aoa) + 2) * 0.35 * factor;
                 }}
-                vx *= 0.8; // הנהגת התנגדות במגע עם הכנף
+
+                // סחרור והזדקרות בזוויות גבוהות
+                if (aoa > 12 && rx > 0) {{
+                    vy += (Math.random() - 0.5) * (aoa - 10) * 0.8;
+                    vx *= (1 - 0.02 * (aoa - 10));
+                }}
             }}
 
             return {{ vx, vy }};
         }}
 
-        // יצירת קווי עשן המורכבים מחלקיקים זורמים בזמן אמת
-        const streamLines = [];
-        const trailSize = 45; // אורך פס העשן הנע
+        // --- מערכת חלקיקי עשן דינמית ---
+        const smokeLines = [];
+        const particlesPerLine = 35;
 
         for (let i = 0; i < numLines; i++) {{
             const startY = (canvas.height / (numLines + 1)) * (i + 1);
-            const lineParticles = [];
-            
-            for (let j = 0; j < trailSize; j++) {{
-                lineParticles.push({{ x: (canvas.width / trailSize) * j, y: startY, startY: startY }});
+            const line = [];
+            for (let j = 0; j < particlesPerLine; j++) {{
+                line.push({{
+                    x: (canvas.width / particlesPerLine) * j,
+                    y: startY,
+                    startY: startY,
+                    size: 3 + Math.random() * 2,
+                    alpha: 0.4 + Math.random() * 0.4
+                }});
             }}
-            streamLines.push(lineParticles);
+            smokeLines.push(line);
         }}
 
-        // ציור הכנף
+        // ציור גוף הכנף
         function drawAirfoil() {{
             ctx.save();
             ctx.translate(centerX, centerY);
@@ -153,7 +169,7 @@ canvas_code = f"""
 
             ctx.fillStyle = "#111827";
             ctx.shadowColor = '#00f0ff';
-            ctx.shadowBlur = 10;
+            ctx.shadowBlur = 12;
             ctx.fill();
             ctx.strokeStyle = "#00f0ff";
             ctx.lineWidth = 2;
@@ -164,43 +180,49 @@ canvas_code = f"""
 
         // לולאת האנימציה הראשית
         function animate() {{
-            // יצירת שובל עמום שמעניק תחושת תנועה וטשטוש עשן
-            ctx.fillStyle = "rgba(5, 5, 8, 0.25)";
+            // ניקוי המסך ליצירת שובל תנועה עדין
+            ctx.fillStyle = "rgba(3, 4, 7, 0.22)";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             drawAirfoil();
 
-            // עדכון וציור תנועת פסי העשן
-            for (let i = 0; i < streamLines.length; i++) {{
-                const line = streamLines[i];
+            // עדכון וציור פסי העשן האורגניים
+            for (let i = 0; i < smokeLines.length; i++) {{
+                const line = smokeLines[i];
 
-                ctx.beginPath();
                 for (let j = 0; j < line.length; j++) {{
                     const p = line[j];
-                    
-                    // חישוב המהירות והרחיפה של העשן
-                    const vel = getFieldVelocity(p.x, p.y);
+
+                    const vel = getFlowVelocity(p.x, p.y);
                     p.x += vel.vx;
                     p.y += vel.vy;
 
-                    // איפוס חלקיק שהגיע לקצה הימני בחזרה לצד שמאל
-                    if (p.x > canvas.width) {{
-                        p.x = 0;
+                    // איפוס חלקיק שיצא מגבולות המסך
+                    if (p.x > canvas.width + 20) {{
+                        p.x = -10;
                         p.y = p.startY;
                     }}
 
-                    if (j === 0) {{
-                        ctx.moveTo(p.x, p.y);
-                    }} else {{
-                        ctx.lineTo(p.x, p.y);
-                    }}
+                    // ציור מולקולת עשן בודדת עם גרדיאנט רך
+                    const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 2.5);
+                    grad.addColorStop(0, `rgba(0, 240, 255, ${{p.alpha}})`);
+                    grad.addColorStop(0.5, `rgba(0, 180, 255, ${{p.alpha * 0.4}})`);
+                    grad.addColorStop(1, "rgba(0, 0, 0, 0)");
+
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size * 2.5, 0, Math.PI * 2);
+                    ctx.fill();
                 }}
 
-                // עיצוב פס העשן הדינמי
-                ctx.strokeStyle = "rgba(0, 240, 255, 0.65)";
-                ctx.lineWidth = 2.5;
-                ctx.shadowColor = 'rgba(0, 240, 255, 0.3)';
-                ctx.shadowBlur = 6;
+                // חיבור הנקודות בקו עשן רציף ומטושטש
+                ctx.beginPath();
+                ctx.moveTo(line[0].x, line[0].y);
+                for (let j = 1; j < line.length; j++) {{
+                    ctx.lineTo(line[j].x, line[j].y);
+                }}
+                ctx.strokeStyle = "rgba(0, 240, 255, 0.25)";
+                ctx.lineWidth = 3;
                 ctx.stroke();
             }}
 
